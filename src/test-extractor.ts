@@ -139,6 +139,12 @@ function fixtureChecks(ex: Extracted): Check[] {
       ),
     },
     {
+      name: 'icon-only link named from descendant title ("Print this page")',
+      ok: els.some(
+        (e: any) => e.kind === 'link' && e.text === 'Print this page'
+      ),
+    },
+    {
       name: 'footer links captured (Help, Contact, terms)',
       ok: ['Help', 'Contact', 'terms'].every((t) =>
         els.some((e: any) => e.kind === 'link' && e.text === t)
@@ -196,6 +202,97 @@ function citylightsChecks(ex: Extracted): Check[] {
   ];
 }
 
+// example.com is frozen content — assert exactly.
+function exampleChecks(ex: Extracted): Check[] {
+  const els = ex.result.elements;
+  return [
+    {
+      name: 'exactly 3 elements (h1, paragraph, link)',
+      ok: els.length === 3,
+      detail: `got ${els.length}`,
+    },
+    {
+      name: 'h1 "Example Domain"',
+      ok: els.some(
+        (e: any) =>
+          e.kind === 'heading' && e.level === 1 && e.text === 'Example Domain'
+      ),
+    },
+    {
+      name: 'link to iana.org captured with text',
+      ok: els.some(
+        (e: any) =>
+          e.kind === 'link' && /iana\.org/.test(e.href) && e.text.length > 0
+      ),
+    },
+    ...commonChecks(ex),
+  ];
+}
+
+// A well-built form: verify proper labels pass through untouched.
+function githubLoginChecks(ex: Extracted): Check[] {
+  const els = ex.result.elements;
+  return [
+    {
+      name: 'page title captured',
+      ok: /Sign in to GitHub/.test(ex.result.page.title),
+    },
+    {
+      name: 'username input with proper label and required flag',
+      ok: els.some(
+        (e: any) =>
+          e.kind === 'input' &&
+          /username or email/i.test(e.label || '') &&
+          e.required === true
+      ),
+    },
+    {
+      name: 'password input captured with its label',
+      ok: els.some(
+        (e: any) =>
+          e.kind === 'input' &&
+          e.inputType === 'password' &&
+          /password/i.test(e.label || '')
+      ),
+    },
+    {
+      name: 'Sign in button captured',
+      ok: els.some((e: any) => e.kind === 'button' && e.text === 'Sign in'),
+    },
+    ...commonChecks(ex),
+  ];
+}
+
+// Hacker News: table layout + icon-only vote links (name lives on a
+// descendant div's title attribute).
+function hackerNewsChecks(ex: Extracted): Check[] {
+  const els = ex.result.elements;
+  const links = els.filter((e: any) => e.kind === 'link');
+  const emptyLinks = links.filter((e: any) => !e.text);
+  return [
+    {
+      name: 'page title captured (Hacker News)',
+      ok: ex.result.page.title === 'Hacker News',
+    },
+    {
+      name: 'front page yields 100+ links',
+      ok: links.length >= 100,
+      detail: `got ${links.length}`,
+    },
+    {
+      name: 'icon-only upvote links named via descendant title',
+      ok: els.filter((e: any) => e.kind === 'link' && e.text === 'upvote')
+        .length >= 10,
+    },
+    {
+      name: 'at most 2 unnamed links (alt-less logo is a real site failure)',
+      ok: emptyLinks.length <= 2,
+      detail: `got ${emptyLinks.length}`,
+    },
+    ...commonChecks(ex),
+  ];
+}
+
 function report(suite: string, checks: Check[]): number {
   console.log(`\n=== ${suite} ===`);
   let failed = 0;
@@ -207,30 +304,68 @@ function report(suite: string, checks: Check[]): number {
   return failed;
 }
 
+interface Suite {
+  name: string;
+  url: string;
+  checks: (ex: Extracted) => Check[];
+  // Local suites must run; live sites may be unreachable — skip, don't fail.
+  skipOnLoadError: boolean;
+}
+
 async function main(): Promise<void> {
   const fixtureUrl = pathToFileURL(
     path.resolve(__dirname, '..', 'fixtures', 'bank.html')
   ).href;
-  const citylightsUrl = 'https://www.w3.org/WAI/demos/bad/before/home.html';
+
+  const suites: Suite[] = [
+    {
+      name: 'Local fixture: bank.html',
+      url: fixtureUrl,
+      checks: fixtureChecks,
+      skipOnLoadError: false,
+    },
+    {
+      name: 'Live: W3C CityLights (inaccessible demo)',
+      url: 'https://www.w3.org/WAI/demos/bad/before/home.html',
+      checks: citylightsChecks,
+      skipOnLoadError: true,
+    },
+    {
+      name: 'Live: example.com (baseline)',
+      url: 'https://example.com',
+      checks: exampleChecks,
+      skipOnLoadError: true,
+    },
+    {
+      name: 'Live: GitHub login (well-built form)',
+      url: 'https://github.com/login',
+      checks: githubLoginChecks,
+      skipOnLoadError: true,
+    },
+    {
+      name: 'Live: Hacker News (table layout, icon links)',
+      url: 'https://news.ycombinator.com',
+      checks: hackerNewsChecks,
+      skipOnLoadError: true,
+    },
+  ];
 
   const browser = await chromium.launch();
 
   let failed = 0;
   let total = 0;
 
-  const fixtureEx = await extract(browser, fixtureUrl);
-  const fChecks = fixtureChecks(fixtureEx);
-  failed += report('Local fixture: bank.html', fChecks);
-  total += fChecks.length;
-
-  try {
-    const cityEx = await extract(browser, citylightsUrl);
-    const cChecks = citylightsChecks(cityEx);
-    failed += report('Live: W3C CityLights (inaccessible demo)', cChecks);
-    total += cChecks.length;
-  } catch (err) {
-    console.log(`\n=== Live: W3C CityLights (inaccessible demo) ===`);
-    console.log(`SKIP  could not load site: ${(err as Error).message}`);
+  for (const suite of suites) {
+    try {
+      const ex = await extract(browser, suite.url);
+      const checks = suite.checks(ex);
+      failed += report(suite.name, checks);
+      total += checks.length;
+    } catch (err) {
+      if (!suite.skipOnLoadError) throw err;
+      console.log(`\n=== ${suite.name} ===`);
+      console.log(`SKIP  could not load site: ${(err as Error).message}`);
+    }
   }
 
   await browser.close();

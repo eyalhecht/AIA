@@ -161,6 +161,23 @@ export function extractPage(): ExtractionResult {
     return null;
   }
 
+  // Last-resort name for links/buttons whose only content is an icon:
+  // pull alt/title/aria-label from the element or its descendants.
+  function iconName(el: Element): string {
+    const own =
+      clean(el.getAttribute('aria-label')) || clean(el.getAttribute('title'));
+    if (own) return own;
+    const named = el.querySelector('[alt], [title], [aria-label]');
+    if (named) {
+      return (
+        clean(named.getAttribute('aria-label')) ||
+        clean(named.getAttribute('alt')) ||
+        clean(named.getAttribute('title'))
+      );
+    }
+    return '';
+  }
+
   // Checkbox/radio labels conventionally sit AFTER the control; grab the
   // next sibling text node if the usual channels found nothing.
   function followingText(el: Element): string | null {
@@ -201,7 +218,7 @@ export function extractPage(): ExtractionResult {
     if (tag === 'A' && el.hasAttribute('href') && role !== 'button') {
       return {
         kind: 'link',
-        text: clean(el.textContent) || clean(el.getAttribute('aria-label')),
+        text: clean(el.textContent) || iconName(el),
         href: el.getAttribute('href') || '',
       };
     }
@@ -217,7 +234,7 @@ export function extractPage(): ExtractionResult {
       const text =
         tag === 'INPUT'
           ? clean((el as HTMLInputElement).value)
-          : clean(el.textContent) || clean(el.getAttribute('aria-label'));
+          : clean(el.textContent) || iconName(el);
       return {
         kind: 'button',
         text,

@@ -6,9 +6,12 @@
   "scripts": {
     "build": "tsc",
     "test:extractor": "tsx src/test-extractor.ts",
+    "test:a11y": "tsx src/test-a11y.ts",
+    "test": "npm run test:extractor && npm run test:a11y",
     "extract": "tsx src/extract-url.ts"
   },
   "devDependencies": {
+    "axe-core": "^4.12.1",
     "esbuild": "^0.28.1",
     "playwright": "^1.61.1",
     "tsx": "^4.23.0",

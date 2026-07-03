@@ -50,7 +50,7 @@ export type ExtractedElement =
       options: string[];
       value: string;
     }
-  | { id: string; kind: 'image'; alt: string | null };
+  | { id: string; kind: 'image'; src: string; alt: string | null };
 
 export interface ExtractionResult {
   page: PageInfo;
@@ -286,7 +286,12 @@ export function extractPage(): ExtractionResult {
       const rect = el.getBoundingClientRect();
       // Tiny images are decoration/tracking pixels — not content.
       if (rect.width < 16 || rect.height < 16) return { skip: true };
-      return { kind: 'image', alt: el.hasAttribute('alt') ? clean(el.getAttribute('alt')) : null };
+      const img = el as HTMLImageElement;
+      return {
+        kind: 'image',
+        src: img.currentSrc || img.src || '',
+        alt: el.hasAttribute('alt') ? clean(el.getAttribute('alt')) : null,
+      };
     }
 
     return null;

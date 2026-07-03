@@ -13,6 +13,7 @@ import * as http from 'http';
 import { chromium, Browser } from 'playwright';
 import { runExtractor } from './harness';
 import { renderAccessible } from './renderer';
+import { enhanceExtraction, loadOpenAiKey } from './enhance';
 
 const HOME_HTML = `<!DOCTYPE html>
 <html lang="en">
@@ -39,6 +40,10 @@ button { font: inherit; font-weight: 600; cursor: pointer; padding: 0.625rem 1.5
 <form action="/view" method="get">
 <label for="url">Web address</label>
 <input id="url" name="url" type="url" required placeholder="https://example.com" autofocus>
+<div style="margin-top:0.75rem">
+<input type="checkbox" id="enhance" name="enhance" value="1">
+<label for="enhance" style="display:inline;font-weight:400">Improve organization with AI (sends page content to OpenAI)</label>
+</div>
 <button type="submit">Open accessible version</button>
 </form>
 </main>
@@ -97,13 +102,22 @@ export async function startViewer(port: number): Promise<Viewer> {
         res.end(errorPage(`Not a valid web address: ${target}`));
         return;
       }
+      const enhance =
+        reqUrl.searchParams.get('enhance') === '1' && loadOpenAiKey() !== null;
       const page = await browser.newPage();
       try {
         await page.goto(target, { waitUntil: 'load', timeout: 30000 });
-        const extraction = await runExtractor(page);
+        let extraction = await runExtractor(page);
+        if (enhance) {
+          // Fail-safe inside: falls back to the plain extraction.
+          extraction = (await enhanceExtraction(extraction)).result;
+        }
+        const suffix = enhance ? '&enhance=1' : '';
         const html = renderAccessible(extraction, {
           rewriteHref: (abs) =>
-            allowedUrl(abs) ? `/view?url=${encodeURIComponent(abs)}` : abs,
+            allowedUrl(abs)
+              ? `/view?url=${encodeURIComponent(abs)}${suffix}`
+              : abs,
         });
         res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
         res.end(html);

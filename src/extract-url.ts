@@ -3,7 +3,8 @@
 // Usage: npm run extract -- <url> [--summary]
 
 import { chromium } from 'playwright';
-import { extractPage, ExtractionResult } from './extractor';
+import type { ExtractionResult } from './extractor';
+import { runExtractor } from './harness';
 
 async function main(): Promise<void> {
   const args = process.argv.slice(2);
@@ -16,12 +17,9 @@ async function main(): Promise<void> {
 
   const browser = await chromium.launch();
   const page = await browser.newPage();
-  await page.addInitScript(() => {
-    (window as any).__name = (fn: unknown) => fn;
-  });
   await page.goto(url, { waitUntil: 'networkidle', timeout: 30000 });
 
-  const result: ExtractionResult = await page.evaluate(extractPage);
+  const result: ExtractionResult = await runExtractor(page);
   await browser.close();
 
   if (summary) {

@@ -1,9 +1,16 @@
 // Page-semantics extractor.
 //
-// IMPORTANT: extractPage must stay fully self-contained (no imports, no
-// references to module-scope values). It is serialized and injected into the
-// target page (page.evaluate in tests, content script later), so it only has
-// access to what exists inside the browser page.
+// Runs inside the target page. Consumed as a bundle (src/inject.ts entry,
+// built with esbuild) injected via addScriptTag in tests / a content script
+// in the extension — so imports are fine, but only browser APIs exist at
+// runtime.
+//
+// Labeling strategy: first ask the W3C accessible-name algorithm
+// (dom-accessibility-api — what a screen reader would announce). When that
+// comes up empty — i.e. the page is built badly — fall back to our repair
+// heuristics (nearby text, placeholder, descendant icon names).
+
+import { computeAccessibleName } from 'dom-accessibility-api';
 
 export interface PageInfo {
   url: string;
@@ -91,39 +98,22 @@ export function extractPage(): ExtractionResult {
     return id;
   }
 
-  // Best-effort label hunt for form controls. Ordered from "properly wired"
-  // to "guess from nearby text" — badly built pages usually only offer the
-  // latter, which is exactly the gap we are papering over.
+  // Spec-computed accessible name: exactly what a screen reader would
+  // announce today. Empty on badly built pages.
+  function specName(el: Element): string {
+    try {
+      return clean(computeAccessibleName(el));
+    } catch {
+      return '';
+    }
+  }
+
+  // Label hunt for form controls. The spec name covers everything properly
+  // wired (label[for], wrapping label, aria-*); the rest is our repair
+  // layer for pages that offer none of that.
   function findLabel(el: Element): string | null {
-    const ariaLabel = clean(el.getAttribute('aria-label'));
-    if (ariaLabel) return ariaLabel;
-
-    const labelledBy = el.getAttribute('aria-labelledby');
-    if (labelledBy) {
-      const text = clean(
-        labelledBy
-          .split(/\s+/)
-          .map((id) => document.getElementById(id)?.textContent || '')
-          .join(' ')
-      );
-      if (text) return text;
-    }
-
-    if (el.id) {
-      const lab = document.querySelector(
-        'label[for="' + (window as any).CSS.escape(el.id) + '"]'
-      );
-      if (lab) {
-        const text = clean(lab.textContent);
-        if (text) return text;
-      }
-    }
-
-    const wrapping = el.closest('label');
-    if (wrapping) {
-      const text = clean(wrapping.textContent);
-      if (text) return text;
-    }
+    const spec = specName(el);
+    if (spec) return spec;
 
     const placeholder = clean(el.getAttribute('placeholder'));
     if (placeholder) return placeholder;
@@ -218,7 +208,7 @@ export function extractPage(): ExtractionResult {
     if (tag === 'A' && el.hasAttribute('href') && role !== 'button') {
       return {
         kind: 'link',
-        text: clean(el.textContent) || iconName(el),
+        text: clean(el.textContent) || specName(el) || iconName(el),
         href: el.getAttribute('href') || '',
       };
     }
@@ -233,8 +223,8 @@ export function extractPage(): ExtractionResult {
     if (isNativeButton || isFakeButton) {
       const text =
         tag === 'INPUT'
-          ? clean((el as HTMLInputElement).value)
-          : clean(el.textContent) || iconName(el);
+          ? clean((el as HTMLInputElement).value) || specName(el)
+          : clean(el.textContent) || specName(el) || iconName(el);
       return {
         kind: 'button',
         text,

@@ -8,7 +8,8 @@
 import { chromium, Browser } from 'playwright';
 import { pathToFileURL } from 'url';
 import * as path from 'path';
-import { extractPage, ExtractionResult } from './extractor';
+import type { ExtractionResult } from './extractor';
+import { runExtractor } from './harness';
 
 interface Check {
   name: string;
@@ -26,14 +27,9 @@ const PUNCT_ONLY = (e: any) =>
 
 async function extract(browser: Browser, url: string): Promise<Extracted> {
   const page = await browser.newPage();
-  // tsx/esbuild wraps functions with a __name helper that doesn't exist in
-  // the page; stub it so the serialized extractPage can run there.
-  await page.addInitScript(() => {
-    (window as any).__name = (fn: unknown) => fn;
-  });
   await page.goto(url, { waitUntil: 'load', timeout: 30000 });
 
-  const result: ExtractionResult = await page.evaluate(extractPage);
+  const result: ExtractionResult = await runExtractor(page);
   // Verify the ids we emitted were actually stamped onto the live DOM —
   // that's the write-back contract.
   const stampedCount = await page.evaluate(

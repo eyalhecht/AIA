@@ -9,9 +9,13 @@
     "extract": "tsx src/extract-url.ts"
   },
   "devDependencies": {
+    "esbuild": "^0.28.1",
     "playwright": "^1.61.1",
     "tsx": "^4.23.0",
     "typescript": "^5.5.3"
   },
-  "private": true
+  "private": true,
+  "dependencies": {
+    "dom-accessibility-api": "^0.7.1"
+  }
 }

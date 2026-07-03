@@ -67,11 +67,18 @@ local `.env` (gitignored). Everything else runs fully offline/deterministic.
 Live-site suites skip gracefully when a site is unreachable; only local
 fixtures can hard-fail the build.
 
+## Write-back
+
+The viewer is not read-only: every `/view` keeps the original page alive in
+a headless-browser session. The regenerated page is one big form — filling
+the accessible "Amount" field fills the real one (with `input`/`change`
+events so frameworks notice), and pressing the accessible button clicks the
+real element via its `data-poc-id`. The page is then re-extracted and
+re-rendered, so results, validation errors and navigations flow back into
+the accessible view. Sessions expire after 5 minutes (max 10 concurrent).
+
 ## Known limitations / next steps
 
-- **Read-mostly for now**: links navigate through the viewer, but form
-  submissions and button clicks are not yet replayed onto the original page
-  (the `data-poc-id` mapping exists for exactly that).
 - Table-layout forms (labels in a different cell than the control) still
   defeat the heuristics; the LLM label inference partially compensates.
 - Very large pages (Wikipedia: ~1300 elements) need main-content detection

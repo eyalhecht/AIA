@@ -37,6 +37,13 @@ const SITES: Site[] = [
     minViolationsBefore: 3,
   },
   {
+    name: 'Local fixture: form.html (interactive)',
+    url: pathToFileURL(path.resolve(__dirname, '..', 'fixtures', 'form.html'))
+      .href,
+    skipOnLoadError: false,
+    minViolationsBefore: 3,
+  },
+  {
     name: 'W3C CityLights home (inaccessible demo)',
     url: 'https://www.w3.org/WAI/demos/bad/before/home.html',
     skipOnLoadError: true,

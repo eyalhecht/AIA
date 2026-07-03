@@ -57,6 +57,66 @@ async function main(): Promise<void> {
     ok: bad.status === 400 && bad.text.includes('role="alert"'),
   });
 
+  // --- write-back: fill the accessible form, press the accessible button,
+  // and the ORIGINAL page must perform the action.
+  const formUrl = pathToFileURL(
+    path.resolve(__dirname, '..', 'fixtures', 'form.html')
+  ).href;
+  const formView = await fetchText(
+    `${base}/view?url=${encodeURIComponent(formUrl)}`
+  );
+  const sessionId = formView.text.match(
+    /name="session" value="([^"]+)"/
+  )?.[1];
+  const fieldIds = [...formView.text.matchAll(/name="v-(e\d+)"/g)].map(
+    (m) => m[1]
+  );
+  const checkboxId = formView.text.match(/name="c-(e\d+)"/)?.[1];
+  const clickId = formView.text.match(/name="click" value="(e\d+)"/)?.[1];
+  checks.push({
+    name: 'interactive render exposes session, fields, checkbox and button',
+    ok: Boolean(sessionId && fieldIds.length === 2 && checkboxId && clickId),
+    detail: ` (session=${!!sessionId} fields=${fieldIds.length} cb=${!!checkboxId} click=${!!clickId})`,
+  });
+
+  const actBody = new URLSearchParams({
+    session: sessionId || '',
+    cbs: checkboxId || '',
+    ['v-' + fieldIds[0]]: '250',
+    ['v-' + fieldIds[1]]: 'Savings ...5678',
+    ['c-' + checkboxId]: '1',
+    click: clickId || '',
+  });
+  const actRes = await fetch(`${base}/act`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/x-www-form-urlencoded' },
+    body: actBody.toString(),
+  });
+  const actText = await actRes.text();
+  checks.push({
+    name: 'write-back action executed on the original page',
+    ok:
+      actRes.status === 200 &&
+      actText.includes('Sent 250 to Savings ...5678 with receipt'),
+  });
+  checks.push({
+    name: 'form state survives the round trip (value, selection, checkbox)',
+    ok:
+      actText.includes('value="250"') &&
+      actText.includes('<option selected>Savings ...5678</option>') &&
+      /name="c-e\d+" value="1" data-source-id="e\d+" checked/.test(actText),
+  });
+
+  const expired = await fetch(`${base}/act`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/x-www-form-urlencoded' },
+    body: 'session=nonexistent',
+  });
+  checks.push({
+    name: 'unknown session yields accessible 410 error page',
+    ok: expired.status === 410 && (await expired.text()).includes('role="alert"'),
+  });
+
   // Both served pages must be axe-clean.
   const browser = await chromium.launch();
   const page = await browser.newPage();

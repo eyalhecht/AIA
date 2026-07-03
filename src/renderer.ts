@@ -14,6 +14,9 @@ import type { ExtractionResult, ExtractedElement } from './extractor';
 export interface RenderOptions {
   // Rewrite link destinations (e.g. the viewer routes them through itself).
   rewriteHref?: (absoluteUrl: string) => string;
+  // Interactive mode: wrap content in one POST form so field values and
+  // button clicks can be replayed onto the original page (write-back).
+  form?: { action: string; sessionId: string };
 }
 
 function esc(s: string): string {
@@ -107,6 +110,11 @@ export function renderAccessible(
     return options.rewriteHref ? options.rewriteHref(abs) : abs;
   };
 
+  // Checkbox ids emitted, listed in a hidden field: an unchecked box is
+  // absent from a POST body, so write-back needs the full roster to know
+  // what to uncheck.
+  const checkboxIds: string[] = [];
+
   // Radio groups render as one fieldset; consume the whole run at once.
   let i = 0;
 
@@ -162,8 +170,13 @@ export function renderAccessible(
         const name = el.text
           ? esc(el.text)
           : `<span class="aia-derived">Unnamed button</span>`;
+        // In form mode a click submits the whole form: field values plus
+        // which button was pressed, replayed onto the original page.
+        const typing = options.form
+          ? `type="submit" name="click" value="${el.id}"`
+          : 'type="button"';
         body.push(
-          `<button type="button" data-source-id="${el.id}"${
+          `<button ${typing} data-source-id="${el.id}"${
             el.disabled ? ' disabled' : ''
           }>${name}</button>`
         );
@@ -173,14 +186,17 @@ export function renderAccessible(
       case 'input': {
         const { labelHtml, inputId } = renderControlLabel(el, 'Unlabeled field');
         const type = el.inputType === 'textarea' ? 'text' : el.inputType;
+        const nameAttr = options.form ? ` name="v-${el.id}"` : '';
         const field =
           el.inputType === 'textarea'
-            ? `<textarea id="${inputId}" data-source-id="${el.id}"${
+            ? `<textarea id="${inputId}"${nameAttr} data-source-id="${el.id}"${
                 el.required ? ' required' : ''
               }>${esc(el.value)}</textarea>`
-            : `<input id="${inputId}" type="${esc(type)}" value="${esc(
-                el.value
-              )}" data-source-id="${el.id}"${el.required ? ' required' : ''}>`;
+            : `<input id="${inputId}"${nameAttr} type="${esc(
+                type
+              )}" value="${esc(el.value)}" data-source-id="${el.id}"${
+                el.required ? ' required' : ''
+              }>`;
         body.push(`<div class="field">${labelHtml}${field}</div>`);
         break;
       }
@@ -193,8 +209,9 @@ export function renderAccessible(
               `<option${o === el.value ? ' selected' : ''}>${esc(o)}</option>`
           )
           .join('');
+        const selName = options.form ? ` name="v-${el.id}"` : '';
         body.push(
-          `<div class="field">${labelHtml}<select id="${inputId}" data-source-id="${el.id}">${opts}</select></div>`
+          `<div class="field">${labelHtml}<select id="${inputId}"${selName} data-source-id="${el.id}">${opts}</select></div>`
         );
         break;
       }
@@ -204,8 +221,10 @@ export function renderAccessible(
         const text = el.label
           ? esc(el.label)
           : `<span class="aia-derived">Unlabeled checkbox</span>`;
+        if (options.form) checkboxIds.push(el.id);
+        const cbName = options.form ? ` name="c-${el.id}" value="1"` : '';
         body.push(
-          `<div class="choice"><input type="checkbox" id="${inputId}" data-source-id="${el.id}"${
+          `<div class="choice"><input type="checkbox" id="${inputId}"${cbName} data-source-id="${el.id}"${
             el.checked ? ' checked' : ''
           }><label for="${inputId}">${text}</label></div>`
         );
@@ -231,9 +250,10 @@ export function renderAccessible(
             const text = r.label
               ? esc(r.label)
               : `<span class="aia-derived">Unlabeled option</span>`;
-            return `<div class="choice"><input type="radio" id="${inputId}" name="g-${esc(
-              group || 'group'
-            )}" data-source-id="${r.id}"${
+            const radioName = options.form
+              ? `r-${esc(group || 'group')}" value="${r.id}`
+              : `g-${esc(group || 'group')}`;
+            return `<div class="choice"><input type="radio" id="${inputId}" name="${radioName}" data-source-id="${r.id}"${
               r.checked ? ' checked' : ''
             }><label for="${inputId}">${text}</label></div>`;
           })
@@ -286,7 +306,15 @@ export function renderAccessible(
 </header>
 <main>
 <h1>${esc(page.title || 'Untitled page')}</h1>
+${
+  options.form
+    ? `<form method="post" action="${esc(options.form.action)}">
+<input type="hidden" name="session" value="${esc(options.form.sessionId)}">
+<input type="hidden" name="cbs" value="${checkboxIds.join(',')}">
 ${body.join('\n')}
+</form>`
+    : body.join('\n')
+}
 </main>
 </body>
 </html>`;

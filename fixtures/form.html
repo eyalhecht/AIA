@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>QuickPay - Send money</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 24px; }
+    .big-title { font-size: 26px; font-weight: bold; margin-bottom: 16px; }
+    .field { margin-bottom: 12px; }
+    .field-name { font-size: 13px; color: #999; }
+    input, select { padding: 6px; width: 220px; }
+    .btn { display: inline-block; padding: 8px 20px; background: #2b6cb0;
+      color: #fff; border-radius: 4px; cursor: pointer; user-select: none; }
+    #result { margin-top: 16px; font-weight: bold; }
+  </style>
+</head>
+<body>
+  <!-- no lang, fake heading, unlabeled controls, div button: inaccessible on purpose -->
+  <div class="big-title">Send money</div>
+
+  <div class="field">
+    <div class="field-name">Amount</div>
+    <input type="text" id="amt">
+  </div>
+
+  <div class="field">
+    <div class="field-name">To account</div>
+    <select id="dest">
+      <option>Checking ...1234</option>
+      <option>Savings ...5678</option>
+    </select>
+  </div>
+
+  <div class="field">
+    <input type="checkbox" id="receipt"> Email me a receipt
+  </div>
+
+  <div class="btn" onclick="send()">Send</div>
+
+  <div id="result"></div>
+
+  <script>
+    function send() {
+      var a = document.getElementById('amt').value;
+      var d = document.getElementById('dest');
+      var dText = d.options[d.selectedIndex].text;
+      var c = document.getElementById('receipt').checked;
+      document.getElementById('result').textContent =
+        a ? 'Sent ' + a + ' to ' + dText + (c ? ' with receipt' : '') : 'Enter an amount';
+    }
+  </script>
+</body>
+</html>

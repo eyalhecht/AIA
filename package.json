@@ -1,0 +1,17 @@
+{
+  "name": "AIA",
+  "version": "1.0.0",
+  "description": "",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "test:extractor": "tsx src/test-extractor.ts",
+    "extract": "tsx src/extract-url.ts"
+  },
+  "devDependencies": {
+    "playwright": "^1.61.1",
+    "tsx": "^4.23.0",
+    "typescript": "^5.5.3"
+  },
+  "private": true
+}

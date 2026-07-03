@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>MyBank - Transfer</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 24px; }
+    /* fake heading: styled div instead of <h1> */
+    .big-title { font-size: 28px; font-weight: bold; margin-bottom: 4px; }
+    /* low contrast text - classic WCAG failure */
+    .balance { color: #b9b9b9; background: #ffffff; margin-bottom: 16px; }
+    .field { margin-bottom: 12px; }
+    .field-name { font-size: 13px; color: #999; }
+    input, select { padding: 6px; width: 220px; }
+    /* fake button: div with onclick, no role, not focusable */
+    .btn {
+      display: inline-block; padding: 8px 20px; background: #2b6cb0;
+      color: #fff; border-radius: 4px; cursor: pointer; user-select: none;
+    }
+    .error { color: #e05555; font-size: 13px; margin-bottom: 10px; }
+    .hidden-debug { display: none; }
+  </style>
+</head>
+<body>
+  <img src="logo.png" width="120" height="40">
+
+  <div class="big-title">Transfer between accounts</div>
+  <div class="balance">Available balance: $4,200.00</div>
+
+  <div class="error" role="alert">Amount must be greater than zero</div>
+
+  <div class="field">
+    <div class="field-name">Amount</div>
+    <input type="text" value="">
+  </div>
+
+  <div class="field">
+    <input type="text" placeholder="Reference note">
+  </div>
+
+  <div class="field">
+    <div class="field-name">To account</div>
+    <select>
+      <option>Checking ...1234</option>
+      <option>Savings ...5678</option>
+    </select>
+  </div>
+
+  <div class="field">
+    <input type="checkbox" id="save-payee"> Save as payee
+  </div>
+
+  <div class="hidden-debug">internal debug panel - should not be extracted</div>
+
+  <div class="btn" onclick="alert('continue')">Continue</div>
+  <a href="/dashboard">Cancel</a>
+
+  <h2>Recent transfers</h2>
+  <div>Jun 28 - $250.00 to Savings ...5678</div>
+
+  <!-- punctuation-separated inline links: classic source of text crumbs -->
+  <div class="footer">
+    [ <a href="/help">Help</a> ] | [ <a href="/contact">Contact</a> ]
+    <br>
+    &copy; 2026 MyBank. See our <a href="/terms">terms</a>.
+  </div>
+</body>
+</html>

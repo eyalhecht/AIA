@@ -7,8 +7,10 @@
     "build": "tsc",
     "test:extractor": "tsx src/test-extractor.ts",
     "test:a11y": "tsx src/test-a11y.ts",
-    "test": "npm run test:extractor && npm run test:a11y",
-    "extract": "tsx src/extract-url.ts"
+    "test:viewer": "tsx src/test-viewer.ts",
+    "test": "npm run test:extractor && npm run test:a11y && npm run test:viewer",
+    "extract": "tsx src/extract-url.ts",
+    "viewer": "tsx src/viewer.ts"
   },
   "devDependencies": {
     "axe-core": "^4.12.1",

@@ -137,4 +137,4 @@ checks can fail, and that is the main source of flakiness.
 
 ## Licence
 
-No licence has been chosen yet, so all rights are reserved by the author.
+All rights reserved; the code is public to read, not to reuse ([LICENSE](LICENSE)).

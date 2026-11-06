@@ -198,20 +198,19 @@ function citylightsChecks(ex: Extracted): Check[] {
   ];
 }
 
-// example.com is frozen content — assert exactly.
+// example.com has rewritten its page before (it dropped the h1), so assert
+// what it is for rather than exact element counts.
 function exampleChecks(ex: Extracted): Check[] {
   const els = ex.result.elements;
   return [
     {
-      name: 'exactly 3 elements (h1, paragraph, link)',
-      ok: els.length === 3,
-      detail: `got ${els.length}`,
+      name: 'page title "Example Domain"',
+      ok: ex.result.page.title === 'Example Domain',
     },
     {
-      name: 'h1 "Example Domain"',
+      name: 'documentation notice captured as text',
       ok: els.some(
-        (e: any) =>
-          e.kind === 'heading' && e.level === 1 && e.text === 'Example Domain'
+        (e: any) => e.kind === 'text' && /documentation examples/.test(e.text)
       ),
     },
     {

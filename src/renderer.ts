@@ -27,10 +27,12 @@ function esc(s: string): string {
     .replace(/"/g, '&quot;');
 }
 
+const LINK_PROTOCOLS = ['http:', 'https:', 'file:', 'mailto:', 'tel:'];
+
 function resolveUrl(href: string, base: string): string | null {
-  if (/^\s*javascript:/i.test(href)) return null;
   try {
-    return new URL(href, base).href;
+    const url = new URL(href, base);
+    return LINK_PROTOCOLS.includes(url.protocol) ? url.href : null;
   } catch {
     return null;
   }
@@ -122,7 +124,7 @@ export function renderAccessible(
     el: { id: string; label: string | null },
     fallback: string
   ): { labelHtml: string; inputId: string } => {
-    const inputId = 'f-' + el.id;
+    const inputId = 'f-' + esc(el.id);
     const text = el.label
       ? esc(el.label)
       : `<span class="aia-derived">${esc(fallback)}</span>`;
@@ -153,7 +155,7 @@ export function renderAccessible(
       case 'link': {
         const href = linkHref(el.href);
         if (!href) {
-          // javascript: or unparseable — present the text, lose the dead href.
+          // javascript:, data: or unparseable — present the text, lose the href.
           if (el.text) body.push(`<p>${esc(el.text)}</p>`);
           break;
         }
@@ -161,7 +163,7 @@ export function renderAccessible(
           ? esc(el.text)
           : `<span class="aia-derived">${esc(nameFromUrl(href))}</span>`;
         body.push(
-          `<p><a href="${esc(href)}" data-source-id="${el.id}">${name}</a></p>`
+          `<p><a href="${esc(href)}" data-source-id="${esc(el.id)}">${name}</a></p>`
         );
         break;
       }
@@ -173,10 +175,10 @@ export function renderAccessible(
         // In form mode a click submits the whole form: field values plus
         // which button was pressed, replayed onto the original page.
         const typing = options.form
-          ? `type="submit" name="click" value="${el.id}"`
+          ? `type="submit" name="click" value="${esc(el.id)}"`
           : 'type="button"';
         body.push(
-          `<button ${typing} data-source-id="${el.id}"${
+          `<button ${typing} data-source-id="${esc(el.id)}"${
             el.disabled ? ' disabled' : ''
           }>${name}</button>`
         );
@@ -186,15 +188,15 @@ export function renderAccessible(
       case 'input': {
         const { labelHtml, inputId } = renderControlLabel(el, 'Unlabeled field');
         const type = el.inputType === 'textarea' ? 'text' : el.inputType;
-        const nameAttr = options.form ? ` name="v-${el.id}"` : '';
+        const nameAttr = options.form ? ` name="v-${esc(el.id)}"` : '';
         const field =
           el.inputType === 'textarea'
-            ? `<textarea id="${inputId}"${nameAttr} data-source-id="${el.id}"${
+            ? `<textarea id="${inputId}"${nameAttr} data-source-id="${esc(el.id)}"${
                 el.required ? ' required' : ''
               }>${esc(el.value)}</textarea>`
             : `<input id="${inputId}"${nameAttr} type="${esc(
                 type
-              )}" value="${esc(el.value)}" data-source-id="${el.id}"${
+              )}" value="${esc(el.value)}" data-source-id="${esc(el.id)}"${
                 el.required ? ' required' : ''
               }>`;
         body.push(`<div class="field">${labelHtml}${field}</div>`);
@@ -209,22 +211,22 @@ export function renderAccessible(
               `<option${o === el.value ? ' selected' : ''}>${esc(o)}</option>`
           )
           .join('');
-        const selName = options.form ? ` name="v-${el.id}"` : '';
+        const selName = options.form ? ` name="v-${esc(el.id)}"` : '';
         body.push(
-          `<div class="field">${labelHtml}<select id="${inputId}"${selName} data-source-id="${el.id}">${opts}</select></div>`
+          `<div class="field">${labelHtml}<select id="${inputId}"${selName} data-source-id="${esc(el.id)}">${opts}</select></div>`
         );
         break;
       }
 
       case 'checkbox': {
-        const inputId = 'f-' + el.id;
+        const inputId = 'f-' + esc(el.id);
         const text = el.label
           ? esc(el.label)
           : `<span class="aia-derived">Unlabeled checkbox</span>`;
         if (options.form) checkboxIds.push(el.id);
-        const cbName = options.form ? ` name="c-${el.id}" value="1"` : '';
+        const cbName = options.form ? ` name="c-${esc(el.id)}" value="1"` : '';
         body.push(
-          `<div class="choice"><input type="checkbox" id="${inputId}"${cbName} data-source-id="${el.id}"${
+          `<div class="choice"><input type="checkbox" id="${inputId}"${cbName} data-source-id="${esc(el.id)}"${
             el.checked ? ' checked' : ''
           }><label for="${inputId}">${text}</label></div>`
         );
@@ -246,14 +248,14 @@ export function renderAccessible(
         }
         const items = run
           .map((r: any) => {
-            const inputId = 'f-' + r.id;
+            const inputId = 'f-' + esc(r.id);
             const text = r.label
               ? esc(r.label)
               : `<span class="aia-derived">Unlabeled option</span>`;
             const radioName = options.form
-              ? `r-${esc(group || 'group')}" value="${r.id}`
+              ? `r-${esc(group || 'group')}" value="${esc(r.id)}`
               : `g-${esc(group || 'group')}`;
-            return `<div class="choice"><input type="radio" id="${inputId}" name="${radioName}" data-source-id="${r.id}"${
+            return `<div class="choice"><input type="radio" id="${inputId}" name="${radioName}" data-source-id="${esc(r.id)}"${
               r.checked ? ' checked' : ''
             }><label for="${inputId}">${text}</label></div>`;
           })
@@ -275,13 +277,13 @@ export function renderAccessible(
           body.push(
             `<figure><img src="${esc(el.src)}" alt="${esc(
               el.alt
-            )}" data-source-id="${el.id}"></figure>`
+            )}" data-source-id="${esc(el.id)}"></figure>`
           );
         } else {
           body.push(
-            `<figure><img src="${esc(el.src)}" alt="" data-source-id="${
+            `<figure><img src="${esc(el.src)}" alt="" data-source-id="${esc(
               el.id
-            }"><figcaption class="aia-derived">Image without description on the original page</figcaption></figure>`
+            )}"><figcaption class="aia-derived">Image without description on the original page</figcaption></figure>`
           );
         }
         break;
@@ -289,6 +291,11 @@ export function renderAccessible(
     }
     i++;
   }
+
+  const originalUrl = resolveUrl(page.url, page.url);
+  const originalLink = originalUrl
+    ? `<a href="${esc(originalUrl)}">${esc(page.url)}</a>`
+    : esc(page.url);
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -300,9 +307,7 @@ export function renderAccessible(
 </head>
 <body>
 <header class="aia-banner">
-<p>Accessible view of <a href="${esc(page.url)}">${esc(
-    page.url
-  )}</a>, regenerated by AIA.</p>
+<p>Accessible view of ${originalLink}, regenerated by AIA.</p>
 </header>
 <main>
 <h1>${esc(page.title || 'Untitled page')}</h1>
@@ -310,7 +315,7 @@ ${
   options.form
     ? `<form method="post" action="${esc(options.form.action)}">
 <input type="hidden" name="session" value="${esc(options.form.sessionId)}">
-<input type="hidden" name="cbs" value="${checkboxIds.join(',')}">
+<input type="hidden" name="cbs" value="${esc(checkboxIds.join(','))}">
 ${body.join('\n')}
 </form>`
     : body.join('\n')

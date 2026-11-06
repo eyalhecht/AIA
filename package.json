@@ -1,20 +1,21 @@
 {
   "name": "AIA",
   "version": "1.0.0",
-  "description": "",
-  "main": "dist/index.js",
+  "description": "Reads any web page's semantics and serves a clean, axe-verified accessible version of it",
   "scripts": {
-    "build": "tsc",
+    "typecheck": "tsc --noEmit",
+    "test:renderer": "tsx src/test-renderer.ts",
     "test:extractor": "tsx src/test-extractor.ts",
     "test:a11y": "tsx src/test-a11y.ts",
     "test:viewer": "tsx src/test-viewer.ts",
     "test:enhance": "tsx src/test-enhance.ts",
-    "test": "npm run test:extractor && npm run test:a11y && npm run test:viewer && npm run test:enhance",
+    "test": "npm run test:renderer && npm run test:extractor && npm run test:a11y && npm run test:viewer && npm run test:enhance",
     "extract": "tsx src/extract-url.ts",
     "enhance": "tsx src/enhance-url.ts",
     "viewer": "tsx src/viewer.ts"
   },
   "devDependencies": {
+    "@types/node": "^22.20.5",
     "axe-core": "^4.12.1",
     "esbuild": "^0.28.1",
     "playwright": "^1.61.1",
@@ -24,5 +25,6 @@
   "private": true,
   "dependencies": {
     "dom-accessibility-api": "^0.7.1"
-  }
+  },
+  "license": "UNLICENSED"
 }

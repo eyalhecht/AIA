@@ -7,6 +7,7 @@
 import { chromium } from 'playwright';
 import { pathToFileURL } from 'url';
 import * as path from 'path';
+import * as os from 'os';
 import { startViewer } from './viewer';
 import { runAxe, formatViolations } from './axe';
 
@@ -24,7 +25,7 @@ async function fetchText(url: string): Promise<{ status: number; text: string }>
 async function main(): Promise<void> {
   const port = 4917;
   const viewer = await startViewer(port);
-  const base = `http://localhost:${port}`;
+  const base = `http://127.0.0.1:${port}`;
   const fixtureUrl = pathToFileURL(
     path.resolve(__dirname, '..', 'fixtures', 'bank.html')
   ).href;
@@ -116,6 +117,21 @@ async function main(): Promise<void> {
     name: 'unknown session yields accessible 410 error page',
     ok: expired.status === 410 && (await expired.text()).includes('role="alert"'),
   });
+
+  const lanAddress = Object.values(os.networkInterfaces())
+    .flat()
+    .find((a) => a && a.family === 'IPv4' && !a.internal)?.address;
+  if (lanAddress) {
+    const reachable = await fetch(`http://${lanAddress}:${port}/`).then(
+      () => true,
+      () => false
+    );
+    checks.push({
+      name: 'viewer is not reachable from other machines',
+      ok: !reachable,
+      detail: ` (tried ${lanAddress})`,
+    });
+  }
 
   // Both served pages must be axe-clean.
   const browser = await chromium.launch();

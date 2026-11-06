@@ -1,9 +1,8 @@
 // Page-semantics extractor.
 //
 // Runs inside the target page. Consumed as a bundle (src/inject.ts entry,
-// built with esbuild) injected via addScriptTag in tests / a content script
-// in the extension — so imports are fine, but only browser APIs exist at
-// runtime.
+// built with esbuild) evaluated in the page by harness.ts — so imports are
+// fine, but only browser APIs exist at runtime.
 //
 // Labeling strategy: first ask the W3C accessible-name algorithm
 // (dom-accessibility-api — what a screen reader would announce). When that

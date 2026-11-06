@@ -139,10 +139,7 @@ export function applyPlan(
       level: 2,
       text: heading,
     } as ExtractedElement);
-    for (const id of ids) {
-      out.push(cloned.get(id));
-      placed.add(id);
-    }
+    for (const id of ids) out.push(cloned.get(id));
   }
 
   for (const el of extraction.elements) {

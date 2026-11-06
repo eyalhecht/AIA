@@ -53,6 +53,7 @@ export function realOpenAiCall(model = 'gpt-4o-mini'): LlmCall {
     if (!key) throw new Error('OPENAI_API_KEY not configured');
     const res = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
+      signal: AbortSignal.timeout(30_000),
       headers: {
         'content-type': 'application/json',
         authorization: `Bearer ${key}`,

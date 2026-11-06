@@ -1,10 +1,9 @@
 {
   "name": "AIA",
   "version": "1.0.0",
-  "description": "",
-  "main": "dist/index.js",
+  "description": "Reads any web page's semantics and serves a clean, axe-verified accessible version of it",
   "scripts": {
-    "build": "tsc",
+    "typecheck": "tsc --noEmit",
     "test:extractor": "tsx src/test-extractor.ts",
     "test:a11y": "tsx src/test-a11y.ts",
     "test:viewer": "tsx src/test-viewer.ts",
@@ -15,6 +14,7 @@
     "viewer": "tsx src/viewer.ts"
   },
   "devDependencies": {
+    "@types/node": "^22.20.5",
     "axe-core": "^4.12.1",
     "esbuild": "^0.28.1",
     "playwright": "^1.61.1",

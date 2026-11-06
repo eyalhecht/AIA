@@ -293,7 +293,8 @@ export async function startViewer(port: number): Promise<Viewer> {
     }
   });
 
-  await new Promise<void>((resolve) => server.listen(port, resolve));
+  // Loopback only: the viewer opens file: URLs and anything the host can reach.
+  await new Promise<void>((resolve) => server.listen(port, '127.0.0.1', resolve));
 
   return {
     port,
